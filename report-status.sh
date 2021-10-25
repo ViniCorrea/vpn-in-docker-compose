@@ -84,9 +84,10 @@ started=$(now)
   # TODO: can we also prevent the OpenDNS resolver from being blocked by the firewall?
   # Detect the IP address of the traffic, i.e. how the internet sees us.
   # myip=$( dig TXT +short o-o.myaddr.l.google.com @ns1.google.com | sed 's/"//g' )
-  resolver=$(dig +short resolver1.opendns.com @"${NS}" +time=1 +tries=1 | sed -e 's/;;.*//')
-  resolver=${resolver:-resolver1.opendns.com}
-  myip=$(dig +short myip.opendns.com "@${resolver}" +time=1 +tries=1 | sed -e 's/;;.*//')
+  # resolver=$(dig +short resolver1.opendns.com @"${NS}" +time=1 +tries=1 | sed -e 's/;;.*//')
+  # resolver=${resolver:-resolver1.opendns.com}
+  #myip=$(dig -4 TXT +short whoami.akamai.net. @ns1-1.akamaitech.net. | sed -e 's/;;.*//')
+  myip=$(dig -4 TXT +short o-o.myaddr.l.google.com @ns1.google.com. | sed -e 's/;;.*//')
   if [[ -z "$myip" ]]; then
     echo "Current IP address cannot be detected:" | ansi gray
     echo "?.?.?.?" | show | ansi yellow
@@ -101,7 +102,7 @@ started=$(now)
   if [[ -e "${country_cache}" && $(find "${country_cache}" -mmin "+${COUNTRY_CACHE_TIME}") ]]; then
     country=$(cat "${country_cache}")
   else
-    country=$(curl -s https://ipvigilante.com/ --connect-timeout 1 | jq -r .data.country_name)
+    country=$(curl https://freegeoip.app/json/${myip} --connect-timeout 1 | jq -r ".country_name")
     if [[ -z "${country}" ]]; then
       country=$(curl -s "http://api.ipstack.com/${myip}?access_key=${IPSTACK_API_KEY}" --connect-timeout 1 | jq -r .country_name)
     fi
@@ -122,8 +123,8 @@ started=$(now)
   fi
 
   # Detect the next-hop IP address with the default routing: is it VPN or a local network?
-  # 10.*.*.* is a VPN (AirVPN). Everything else is considered to be a local network.
-  nexthop=$(traceroute -n -m1 -q1 "${STATUS_IP}" 2>/dev/null | tail -n+2 | awk '{print $2}' || true)
+  # 10.*.*.* is a VPN Everything else is considered to be a local network.
+    nexthop=$(traceroute -n -m1 -q1 "${STATUS_IP}" 2>/dev/null | tail -n+2 | awk '{print $2}' || true)
   if [[ -z "${nexthop}" ]]; then
     echo "Next-hop IP address is absent (blocked):" | ansi gray
     echo "-*-*-*-" | show | ansi yellow

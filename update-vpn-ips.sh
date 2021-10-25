@@ -13,11 +13,6 @@
 # it uses the latest known lists. If no lists were retrieved, then the traffic
 # is blocked without exceptions, and the system needs manual intervention.
 #
-# For the AirVPN-specific logic, see:
-#
-# * https://airvpn.org/faq/api/
-# * https://airvpn.org/topic/14378-how-can-i-get-vpn-servers-entry-ip-addresses/
-#
 set -euo pipefail
 
 # The primary DNS resolver to use. Assume that the local resolvers are blocked,
@@ -32,7 +27,7 @@ set -euo pipefail
 # Which server scopes to resolve into the IP addresses. AirVPN has scopes
 # for the whole world ("earth"), continents, countries, and specific servers
 # (all of them have more than one IP address, including individual servers).
-: ${SCOPES:="earth europe america asia nl de cz us tauri orion alrai"}
+: ${SCOPES:="br br2 uus-fl us-ny pg"}
 
 # Command-line arguments always override the env variables as the most specific.
 if [[ $# -gt 0 ]]; then
@@ -41,7 +36,7 @@ fi
 
 # Always add AirVPN API's endpoints to the list of allowed IPs.
 # Otherwise, we will not be able to talk to their API (if we need).
-SCOPES="airvpn.org ${SCOPES}"
+SCOPES="torguard.com ${SCOPES}"
 
 total_main_file="${ALLOWED_IPS_FILE}"
 total_temp_file="${ALLOWED_IPS_FILE}.digged.tmp"
@@ -61,15 +56,13 @@ for scope in $SCOPES; do
     hosts=("$scope")
   else
     hosts=(
-      "${scope}.airservers.org"
-      "${scope}.all.vpn.airdns.org"
-      "${scope}2.all.vpn.airdns.org"
+      "${scope}.torguard.com"
     )
   fi
 
   # Resolve each possible host for this scope.
   # Time-cap to avoid hangups: it either works fast, or it doesn't work at all.
-  echo -n >"${scope_temp_file}"
+    echo -n >"${scope_temp_file}"
   for host in "${hosts[@]}"; do
     if dig @"${NS}" "${host}" +short +tcp +time=1 +tries=3 | grep -v '^;' >>"${scope_temp_file}"; then
       echo "Resolved ${scope} via ${host}"
